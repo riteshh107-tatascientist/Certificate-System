@@ -854,8 +854,8 @@ elif page in ("Admin", "Login"):
             last, err = db.get_meta("last_cloud_backup"), db.get_meta("last_cloud_error")
             k1, k2, k3 = st.columns(3)
             k1.metric("Last cloud backup", last or "never")
-            k2.metric("Backup repository", cfg["repo"])
-            k3.metric("Status", "⚠️ Error" if err else "✅ Active")
+            k2.metric("Backup repository", cfg["repo"].replace("/", " / "))
+            k3.metric("Status", "⚠️ Error" if err else ("✅ Active" if last else "🟡 Not tested yet"))
             if err:
                 st.error(err)
             b1, b2 = st.columns(2)

@@ -37,6 +37,25 @@ class CloudError(Exception):
     """Friendly, user-displayable backup error."""
 
 
+def normalize_repo(value):
+    """Accept 'user/repo', 'https://github.com/user/repo', '...repo.git' or '.../tree/main' -> 'user/repo'."""
+    v = str(value or "").strip()
+    for prefix in ("https://", "http://", "git@"):
+        if v.lower().startswith(prefix):
+            v = v[len(prefix):]
+    v = v.replace("github.com:", "github.com/")
+    if v.lower().startswith("www."):
+        v = v[4:]
+    if v.lower().startswith("github.com/"):
+        v = v[len("github.com/"):]
+    parts = [p for p in v.split("/") if p]
+    if len(parts) >= 2:
+        v = f"{parts[0]}/{parts[1]}"
+    if v.endswith(".git"):
+        v = v[:-4]
+    return v
+
+
 def config():
     """Return the GitHub backup config dict, or None when not configured."""
     section = {}
@@ -46,8 +65,8 @@ def config():
     except Exception:
         pass
     token = str(section.get("token") or os.environ.get("GITHUB_BACKUP_TOKEN", "")).strip()
-    repo = str(section.get("repo") or os.environ.get("GITHUB_BACKUP_REPO", "")).strip().strip("/")
-    if not token or "/" not in repo:
+    repo = normalize_repo(section.get("repo") or os.environ.get("GITHUB_BACKUP_REPO", ""))
+    if not token or repo.count("/") != 1:
         return None
     return {
         "token": token,
