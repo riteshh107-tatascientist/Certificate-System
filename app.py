@@ -26,7 +26,8 @@ CATEGORIES = [
     "Academic Achievement", "Award & Recognition", "Volunteering & Leadership", "Other",
 ]
 MIN_DATE, MAX_DATE = date(1990, 1, 1), date(2100, 12, 31)
-PER_PAGE_PUBLIC, PER_PAGE_ADMIN = 6, 8
+PER_PAGE_ADMIN = 8
+LINKEDIN_URL = "https://www.linkedin.com/in/ritesh-tech-duniya"
 UPLOAD_TYPES = ["pdf", "png", "jpg", "jpeg", "webp"]
 
 
@@ -286,6 +287,23 @@ def render_public_card(cert, prefix):
                 st.caption("📎 No certificate file attached.")
 
 
+def open_certificates(**preset):
+    """Go to the Certificates page with optional filter presets (flt_cat, flt_skill, flt_featured...)."""
+    for k in [k for k in st.session_state if str(k).startswith("flt_")]:
+        del st.session_state[k]
+    st.session_state.update(preset)
+    navigate("Certificates")
+
+
+def jai_banner():
+    points = ["🚩 Jay Mahakal", "🚩 Jay Shree Ram", "✦ Verified Certificates", "✦ Data Science · AI · Python",
+              "✦ Learn. Build. Verify. Grow.", "✦ Secure Cloud Backup", "✦ Founder & CEO — Ritesh Kumar Singh"]
+    items = "".join(f'<span class="tick-item">{escape(p)}</span>' for p in points)
+    html(f'<div class="jai-wrap"><span class="jai-runner">🚩</span>'
+         f'<div class="jai-title">🚩 JAY MAHAKAL &nbsp;·&nbsp; JAY SHREE RAM 🚩</div>'
+         f'<div class="jai-ticker"><div class="jai-track">{items}{items}</div></div></div>')
+
+
 def do_restore(zip_bytes, mode):
     """Restore a backup (keeps a safety copy of the current vault first). Returns a message."""
     if mode == "replace" and db.count_certificates() > 0:
@@ -316,6 +334,8 @@ with st.sidebar:
                      type="primary" if st.session_state.page == page_name else "secondary"):
             navigate(page_name)
 
+    st.link_button("🔗  LinkedIn", LINKEDIN_URL, width="stretch")
+
     if auth.is_authenticated():
         st.divider()
         st.success("Admin signed in")
@@ -335,6 +355,7 @@ page = st.session_state.page
 if page == "Home":
     show_flash()
     stats = db.get_dashboard_stats()
+    jai_banner()
     html(f"""
         <section class="hero">
             <div class="hero-copy">
@@ -343,20 +364,27 @@ if page == "Home":
                 <p>Welcome to my personal Certificate Vault — a central portfolio for my certifications,
                 technical skills, learning milestones, and professional growth.</p>
                 <div class="owner-pill">✦ Ritesh Kumar Singh &nbsp; | &nbsp; Founder &amp; CEO</div>
+                <a class="owner-pill" href="{LINKEDIN_URL}" target="_blank" rel="noopener"
+                   style="margin-left:10px;text-decoration:none;color:inherit">in &nbsp;LinkedIn</a>
             </div>
             {profile_photo_html()}
         </section>""")
     html('<div class="section-title">Portfolio at a Glance</div>'
          '<div class="section-subtitle">A professional home for my learning achievements.</div>')
 
-    c1, c2, c3, c4 = st.columns(4)
-    for col, label, value in [(c1, "PUBLISHED CERTIFICATES", stats["published"]),
-                              (c2, "SKILL CATEGORIES", stats["categories"]),
-                              (c3, "FEATURED", stats["featured"]),
-                              (c4, "PORTFOLIO FOCUS", "AI + DATA")]:
+    boxes = [("PUBLISHED CERTIFICATES", stats["published"], "Certificates", {}),
+             ("SKILL CATEGORIES", stats["categories"], "Certificates", {}),
+             ("FEATURED", stats["featured"], "Certificates", {"flt_featured": True}),
+             ("PORTFOLIO FOCUS", "AI + DATA", "About", {})]
+    for col, (label, value, target, preset) in zip(st.columns(4), boxes):
         with col:
             html(f'<div class="metric-card"><div class="metric-label">{label}</div>'
                  f'<div class="metric-value">{escape(str(value))}</div></div>')
+            if st.button("Open →", key=f"box_{target}_{label}", width="stretch"):
+                if target == "Certificates":
+                    open_certificates(**preset)
+                else:
+                    navigate(target)
 
     featured = db.get_certificates(published_only=True, featured_only=True, sort="Issue date (newest)")[:3]
     if featured:
@@ -379,30 +407,31 @@ if page == "Home":
                 html('<div class="section-title">Certificates by Category</div>')
                 df = pd.DataFrame(cat_counts, columns=["Category", "Certificates"]).set_index("Category")
                 st.bar_chart(df, horizontal=True, height=max(200, 38 * len(df)))
+                pick = st.pills("Click a category to open it", [c for c, _ in cat_counts], key="home_cat_pill")
+                if pick:
+                    open_certificates(**({"flt_cat": pick} if pick in CATEGORIES else {}))
         if top_skills:
             with gr:
                 html('<div class="section-title">Top Skills</div>')
-                html('<div class="cert-badges">' + "".join(
-                    f'<span class="badge">{escape(s)} · {n}</span>' for s, n in top_skills) + "</div>")
+                pick = st.pills("Click a skill to see its certificates", [s_ for s_, _ in top_skills],
+                                key="home_skill_pill")
+                if pick:
+                    open_certificates(flt_skill=pick)
 
     html('<div class="section-title">Explore Your Portfolio</div>'
          '<div class="section-subtitle">Choose a section to continue.</div>')
-    a, b, c = st.columns(3)
-    for col, icon, title, desc in [
-        (a, "🏆", "Certificate Library", "Browse published certificates, skills, and credentials."),
-        (b, "✅", "Verify Credential", "Check any credential ID against the vault instantly."),
-        (c, "🔐", "Owner Control Center", "Manage certificate records through the private admin area."),
-    ]:
+    for col, (icon, title, desc, target, btn) in zip(st.columns(3), [
+        ("🏆", "Certificate Library", "Browse all published certificates, skills, and credentials.", "Certificates", "Open Library →"),
+        ("✅", "Verify Credential", "Check any credential ID against the vault instantly.", "Verify", "Verify Now →"),
+        ("🔐", "Owner Control Center", "Manage certificate records through the private admin area.", "Admin", "Open Admin →"),
+    ]):
         with col:
             html(f'<div class="feature-card"><div class="feature-icon">{icon}</div><h3>{title}</h3><p>{desc}</p></div>')
-    st.write("")
-    x, y, z = st.columns(3)
-    if x.button("Explore Certificates  →", type="primary", width="stretch"):
-        navigate("Certificates")
-    if y.button("Verify a Credential  →", width="stretch"):
-        navigate("Verify")
-    if z.button("Meet the Owner  →", width="stretch"):
-        navigate("About")
+            if st.button(btn, key=f"feat_open_{target}", width="stretch", type="primary" if target == "Certificates" else "secondary"):
+                if target == "Certificates":
+                    open_certificates()
+                else:
+                    navigate(target)
 
 # ============================ CERTIFICATES ============================
 
@@ -428,13 +457,13 @@ elif page == "Certificates":
         years = sorted({y for y, _ in db.get_year_counts(True)}, reverse=True)
 
         r1a, r1b, r1c = st.columns([2, 1, 1])
-        search = r1a.text_input("🔎 Search certificates", placeholder="Title, issuer, skill or credential ID...")
-        category = r1b.selectbox("Category", ["All Categories"] + CATEGORIES)
-        sort = r1c.selectbox("Sort by", list(db.SORTS))
+        search = r1a.text_input("🔎 Search certificates", placeholder="Title, issuer, skill or credential ID...", key="flt_search")
+        category = r1b.selectbox("Category", ["All Categories"] + CATEGORIES, key="flt_cat")
+        sort = r1c.selectbox("Sort by", list(db.SORTS), key="flt_sort")
         r2a, r2b, r2c = st.columns([1, 1, 1])
-        skill = r2a.selectbox("Skill", ["Any skill"] + skills)
-        year = r2b.selectbox("Year", ["Any year"] + years)
-        only_featured = r2c.toggle("⭐ Featured only")
+        skill = r2a.selectbox("Skill", ["Any skill"] + skills, key="flt_skill")
+        year = r2b.selectbox("Year", ["Any year"] + years, key="flt_year")
+        only_featured = r2c.toggle("⭐ Featured only", key="flt_featured")
 
         certificates = db.get_certificates(
             published_only=True, category=category, search=search, sort=sort,
@@ -445,7 +474,7 @@ elif page == "Certificates":
             st.info("No published certificates match. Try clearing a filter, or add certificates in Admin Studio.")
         else:
             st.caption(f"Showing {len(certificates)} certificate(s)")
-            for cert in paginate(certificates, PER_PAGE_PUBLIC, "pub_page"):
+            for cert in certificates:  # every published certificate is shown (no paging)
                 render_public_card(cert, "pub")
 
 # ============================ VERIFY ============================
@@ -496,6 +525,7 @@ elif page == "About":
         st.markdown("- Data Science and Data Analytics\n- Python Programming and SQL\n"
                     "- Machine Learning and Artificial Intelligence\n- Building practical technology projects")
         html('<div class="owner-pill">✦ Founder &amp; CEO — Certificate Vault</div>')
+        st.link_button("🔗 Connect on LinkedIn", LINKEDIN_URL)
 
 # ============================ ADMIN ============================
 
@@ -579,7 +609,7 @@ elif page in ("Admin", "Login"):
                     st.caption("No issue dates recorded yet.")
             allc = db.get_certificates(sort="Most viewed")[:10]
             st.markdown("**Most viewed**")
-            st.dataframe(pd.DataFrame([{"Title": c["title"], "Views": c["views"], "Downloads": c["downloads"],
+            st.dataframe(pd.DataFrame([{"Title": c["title"], "Issuer": c["issuer"], "Views": c["views"], "Downloads": c["downloads"],
                                         "Status": "Published" if c["published"] else "Draft"} for c in allc]),
                          width="stretch", hide_index=True)
 
@@ -980,5 +1010,6 @@ html("""
     <div class="footer">
         © 2026 Ritesh Kumar Singh · Founder &amp; CEO<br>
         Certificate Vault · Built with Python &amp; Streamlit<br>
+        <a href="https://www.linkedin.com/in/ritesh-tech-duniya" target="_blank" rel="noopener" style="color:#67e8f9">LinkedIn: ritesh-tech-duniya</a><br>
         Learn. Build. Verify. Grow.
     </div>""")

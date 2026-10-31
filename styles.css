@@ -275,3 +275,19 @@ div[data-testid="stSelectbox"] div[data-baseweb="select"] {
 .cert-badges { margin: 6px 0 10px; display: flex; flex-wrap: wrap; gap: 6px; }
 .verify-ok { border: 1px solid #1f6b3a; background: #22c55e12; border-radius: 16px; padding: 16px 20px; margin: 10px 0; }
 .verify-bad { border: 1px solid #7f2a2a; background: #ef444412; border-radius: 16px; padding: 16px 20px; margin: 10px 0; }
+
+/* ---- Jai banner (glowing, moving red flag, left -> right loop) ---- */
+.jai-wrap{position:relative;overflow:hidden;border:1px solid #ff6a00aa;border-radius:18px;padding:14px 0 10px;margin:0 0 18px;
+  background:linear-gradient(90deg,#2a0a00,#4a1200 50%,#2a0a00);box-shadow:0 0 22px #ff5a0066, inset 0 0 18px #ff8c0033;animation:jaiGlow 2.6s ease-in-out infinite}
+.jai-title{text-align:center;font-weight:800;font-size:1.5rem;letter-spacing:.12em;color:#ffe2b0;margin-top:6px;
+  text-shadow:0 0 6px #ff9d2e,0 0 14px #ff6a00,0 0 28px #ff3d00;animation:jaiPulse 1.8s ease-in-out infinite}
+.jai-ticker{overflow:hidden;margin-top:8px;white-space:nowrap}
+.jai-track{display:inline-flex;width:max-content;animation:jaiMove 30s linear infinite}
+.tick-item{padding:0 2.2rem;color:#ffd9a0;font-weight:600;text-shadow:0 0 8px #ff8c00}
+.jai-runner{position:absolute;top:0;left:-6%;font-size:1.6rem;animation:jaiRun 9s linear infinite;filter:drop-shadow(0 0 8px #ff2a00)}
+@keyframes jaiMove{from{transform:translateX(-50%)}to{transform:translateX(0)}}
+@keyframes jaiRun{0%{left:-6%;transform:rotate(-10deg)}25%{transform:rotate(10deg)}50%{transform:rotate(-10deg)}75%{transform:rotate(10deg)}100%{left:102%;transform:rotate(-10deg)}}
+@keyframes jaiPulse{0%,100%{opacity:.85;text-shadow:0 0 4px #ff9d2e,0 0 10px #ff6a00}50%{opacity:1;text-shadow:0 0 8px #ffc46b,0 0 20px #ff6a00,0 0 38px #ff3d00}}
+@keyframes jaiGlow{0%,100%{box-shadow:0 0 14px #ff5a0055, inset 0 0 12px #ff8c0022}50%{box-shadow:0 0 32px #ff5a00aa, inset 0 0 22px #ff8c0044}}
+@media (max-width:640px){.jai-title{font-size:1.05rem}}
+@media (prefers-reduced-motion:reduce){.jai-wrap,.jai-title,.jai-track,.jai-runner{animation:none}}
